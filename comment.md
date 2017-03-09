@@ -332,6 +332,8 @@ What do these mean:
 
 And this is the version 1.
 
+There is also the quote sign somewhere.
+Maybe just a quote without parentheses quotes from here till the end of the node.
 
 
 
