@@ -1,0 +1,7 @@
+let
+		a (+ 1 v)
+		b (car z)
+		c (avg 8 3 w)
+		d w
+	body-goes-here
+

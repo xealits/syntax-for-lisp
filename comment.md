@@ -5,7 +5,8 @@ A bit of syntax for Lisp
 
 The main idea is from:
 https://pschombe.wordpress.com/2006/04/16/lisp-without-parentheses/
-plus a modification and the coma
+
+plus a modification and the coma.
 
 
 
@@ -15,18 +16,20 @@ plus a modification and the coma
 Syntax
 ======
 
-The parentheses,
-meaningful indentation (a-la Python) with a tweak for behaviour of only 1 symbol on the line,
-the coma means the finish of the current list-call on the line (and possibly start of a new one),
-the & means the following are the nested list-call inside current call (a-la Haskell).
+It's all work in progress.
+But overall the syntaxis consists of:
+* he parentheses,
+* meaningful indentation (a-la Python),
+* the coma works like & in Haskel -- it nests a node in the current one,
+* the semicolon means the end of "current node",
+* (TODO) and the backslash \ should cancel the nesting of an indented line.
 
+Examples:
 
-
-
-
-
-Examples
-========
+	a , b c            = (a (b c))
+	a , b , c ; d , r  = (a (b (c))) (d (r))
+	a                  = (a (b c))
+		b c
 
 From the article
 
@@ -79,6 +82,14 @@ or
 			d w
 		body-goes-here
 
+
+
+
+
+
+
+Examples
+========
 
 
 The large function issue:
