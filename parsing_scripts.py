@@ -1,3 +1,4 @@
+import logging
 
 examples = [ '  (a b)',
         'a b c , d e f',
@@ -115,6 +116,8 @@ def parse_tokens(chars: str) -> 'list(str)':
     for t in syntax_tokens:
         chars = chars.replace(t, ' %s ' % t)
 
+    #print('pre-tokens:\n%s' % chars)
+
     # merge trailing tabs after \n
     # remove others
 
@@ -152,15 +155,17 @@ def parse_syntax(chars: str) -> str:
     '''
     '''
     tokens = parse_tokens(chars)
+    logging.debug('syntax tokens:\n%s' % tokens)
 
     nod_tree  = []
     semicolon_nod = nod_tree # hook for coma-semicolon cooperation
     nod_stack = [nod_tree] # current branch of the tree
-    open_nod, open_parenthesis = nod_tree, 0
+    open_nods, open_parenthesis = [nod_tree], 0
     prev_tabs = 0
     # indent_parent is the last node in nod_tree == the nod_stack[1] node
 
     for i, t in enumerate(tokens):
+        #print(t)
         #print(len(nod_stack))
         # cases for special tokens (ifs for now)
         if t == '(':
@@ -168,7 +173,8 @@ def parse_syntax(chars: str) -> str:
             new_nod = list()
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
-            open_nod, semicolon_nod = new_nod, new_nod
+            open_nods.append(new_nod)
+            semicolon_nod = new_nod
             open_parenthesis += 1
             # parentheses should somehow work above other syntaxis, but how?
             #indent_parent, indent_prev, prev_tabs = nod_tree, nod_tree, 0
@@ -177,17 +183,24 @@ def parse_syntax(chars: str) -> str:
             # nest a node in the stack at depth of t.n
             # so, I need the largest level below t.n in the stack, call it N
             # and nest there with t.n - N depth
-            print(nod_stack)
+            #print(nod_stack)
             if t.n <= prev_tabs:
+                #print("case A")
                 # nest the parent nod of indentation
                 # it is the first after the root node nod_tree
                 # or the open_nod if it is higher in the stack..
                 # TODO: check "no-nest" option of tabs
-                while (nod_stack[-1] is not open_nod or len(nod_stack) > 2):
+                #print('open nods:\n%s' % open_nods)
+                #print('stack len: %d' % len(nod_stack))
+                while (nod_stack[-1] is not open_nods[-1] and len(nod_stack) > 2):
                     nod_stack.pop()
                 # now nod_stack[-1] == nod_stack[1] == nod_tree[-1]
                 # or nod_stack[-1] == open_node
-                assert nod_stack[1] == nod_tree[-1] # just to be sure, it sould be true always
+                #print('stack len: %d' % len(nod_stack))
+                #print(nod_stack)
+                #print(nod_tree)
+                if len(nod_stack) > 1:
+                    assert nod_stack[1] == nod_tree[-1] # just to be sure, it sould be true always
 
                 new_nod = list()
                 nod_stack[-1].append(new_nod)
@@ -195,6 +208,7 @@ def parse_syntax(chars: str) -> str:
                 semicolon_nod = new_nod
 
             else:
+                #print("case B")
                 # just nest the previous node in the stack
                 new_nod = list()
                 nod_stack[-1].append(new_nod)
@@ -207,7 +221,7 @@ def parse_syntax(chars: str) -> str:
                 # probably I need to finish open tabs
                 # but remain in the opened node
                 # pop the stack untill the open_nod
-                while (nod_stack[-1] is not open_nod):
+                while (nod_stack[-1] is not open_nods[-1]):
                     nod_stack.pop()
                 semicolon_nod = nod_stack[-1]
             # otherwise the current node parsing has ended
@@ -247,21 +261,24 @@ def parse_syntax(chars: str) -> str:
                 raise SyntaxError("closing parenthesis without matchin open one, token %d" % i)
             # otherwise,
             # close all of the stack with the open node
-            while (nod_stack[-1] is not open_nod):
+            while (nod_stack[-1] is not open_nods[-1]):
                 nod_stack.pop()
             nod_stack.pop() # and close the open node
-            open_nod, semicolon_nod = nod_stack[-1], nod_stack[-1]
+            open_nods.pop()
+            semicolon_nod = nod_stack[-1]
 
         # cases for not special tokens
         elif len(nod_stack) == 1:
             # symbols at root-level open a new node
-            new_nod = list(t)
+            #print('nest symbol:\n%s' % t)
+            new_nod = [t]
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod)
             semicolon_nod = new_nod
         else:
             # just add the symbol to the last nod
-            print(nod_stack)
+            #print(nod_stack)
+            #print('adding symbol:\n%s' % t)
             nod_stack[-1].append(t)
 
     return nod_tree
@@ -271,5 +288,17 @@ def nod_tree_to_string(nod_tree: list) -> str:
     '''
     '''
     return ''.join([' %s ' % nod if type(nod) is str else '(%s)' % nod_tree_to_string(nod) for nod in nod_tree])
+
+
+if __name__ == '__main__':
+    from sys import argv
+    logging.info(argv)
+    assert len(argv) > 1
+    with open(argv[1]) as f:
+        nod_tree = parse_syntax(f.read())
+        logging.debug('tree:\n%s' % nod_tree)
+        print(nod_tree_to_string(nod_tree))
+
+
 
 
