@@ -6,7 +6,7 @@ A bit of syntax for Lisp
 The main idea is from:
 https://pschombe.wordpress.com/2006/04/16/lisp-without-parentheses/
 
-plus a modification and the coma.
+plus the coma and the semicolon.
 
 
 
@@ -18,7 +18,8 @@ Syntax
 
 It's all work in progress.
 But overall the syntaxis consists of:
-* he parentheses,
+
+* the parentheses,
 * meaningful indentation (a-la Python),
 * the coma works like & in Haskel -- it nests a node in the current one,
 * the semicolon means the end of "current node",
