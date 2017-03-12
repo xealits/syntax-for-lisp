@@ -1,5 +1,5 @@
 
 for-each                                                                                                                            
-	lambda (x) (begin (display x) (newline))
+	lambda (x) , begin (display x) (newline)
 	string-split (getenv "PATH") #\:
 
