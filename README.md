@@ -8,6 +8,9 @@ https://pschombe.wordpress.com/2006/04/16/lisp-without-parentheses/
 
 plus the coma and the semicolon.
 
+Check it out with:
+
+	guile -c (python3 parsing_scripts.py example1)
 
 
 
