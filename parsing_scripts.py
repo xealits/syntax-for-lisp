@@ -155,7 +155,7 @@ def parse_syntax(chars: str) -> str:
     '''
     '''
     tokens = parse_tokens(chars)
-    logging.debug('syntax tokens:\n%s' % tokens)
+    logging.debug('syntax tokens:%s' % tokens)
 
     nod_tree  = []
     semicolon_nod = nod_tree # hook for coma-semicolon cooperation
@@ -241,13 +241,21 @@ def parse_syntax(chars: str) -> str:
         elif t == ';':
             # semicolon finishes its' node
             # it should move the head of the stack to the semicolon node
+            # and it nests new node in the semicolon node
             # (a ; b)? TODO: this will break on different levels of nesting
             #  a ; b?
             while (nod_stack[-1] is not semicolon_nod):
                 nod_stack.pop()
             # and move to parent
             nod_stack.pop()
-            semicolon_nod = nod_stack[-1]
+            # and nest new node:
+            new_nod = list()
+            nod_stack[-1].append(new_nod)
+            nod_stack.append(new_nod)
+            # -- thus colon at the end of a node `(a , b ;)` doesn't make sence
+
+            # don't move the stack node:
+            #semicolon_nod = nod_stack[-1]
 
         elif t == ')':
             # the parenthesis should striclty finish the corresp opening parenthesis
@@ -292,12 +300,25 @@ def nod_tree_to_string(nod_tree: list) -> str:
 
 if __name__ == '__main__':
     from sys import argv
-    logging.info(argv)
     assert len(argv) > 1
-    with open(argv[1]) as f:
-        nod_tree = parse_syntax(f.read())
-        logging.debug('tree:\n%s' % nod_tree)
-        print(nod_tree_to_string(nod_tree))
+
+    i = 1 # when input starts
+    if argv[1] == '-d':
+        logging.basicConfig(level=logging.DEBUG)
+        i += 1
+
+    logging.info(argv)
+
+    if argv[i] == '-c':
+        inp = argv[i+1]
+    else:
+        with open(argv[i]) as f:
+            inp = f.read()
+
+    logging.debug('inp:%s' % inp)
+    nod_tree = parse_syntax(inp)
+    logging.debug('tree:%s' % nod_tree)
+    print(nod_tree_to_string(nod_tree))
 
 
 

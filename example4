@@ -1,0 +1,7 @@
+define dir , opendir "."
+do
+	(entry (readdir dir) (readdir dir))
+	(eof-object? entry)
+	display entry; newline
+closedir dir
+
