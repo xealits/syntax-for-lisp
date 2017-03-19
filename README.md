@@ -27,6 +27,7 @@ But overall the syntaxis consists of:
 * the coma works like & in Haskel -- it nests a node in the current one,
 * the semicolon means the end of "current node",
 * (TODO) and the backslash \ should cancel the nesting of an indented line.
+* for now comment is from `%` till end of line
 
 Examples:
 

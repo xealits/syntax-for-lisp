@@ -1,0 +1,19 @@
+use-modules (ice-9 regex)
+
+define pattern
+	getenv "PATTERN"
+	%string-split (getenv "PATTERN") #\*
+display pattern
+newline
+% TODO: add check for PATTERN variable
+% or command-line input
+
+define dir , opendir "."
+do
+	(entry (readdir dir) (readdir dir))
+	(eof-object? entry)
+	if
+		string-match pattern entry
+		begin (display entry) (newline)
+closedir dir
+

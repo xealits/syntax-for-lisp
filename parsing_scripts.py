@@ -100,8 +100,12 @@ def parse_line(line: str) -> str:
 class Tabs:
     def __init__(self, n):
         self.n = n
+    def __str__(self):
+        return '\t' * self.n
+    def __repr__(self):
+        return "Tabs(%d)" % self.n
 
-syntax_tokens = ['(', ')', '\n', '\t', ';', ',']
+syntax_tokens = ['(', ')', '\n', '\t', ';', ',', '%']
 
 def parse_tokens(chars: str) -> 'list(str)':
     '''parse_tokens(line: str) -> 'list(str)'
@@ -124,10 +128,17 @@ def parse_tokens(chars: str) -> 'list(str)':
     res = []
     newline = False
     tabline = 0
+    comment = False
     for t in chars.split(' '):
         if t == '':
             continue
+        elif comment and not t == '\n':
+            continue
+        elif t == '%':
+            comment = True
+            continue
         elif t == '\n':
+            if comment: comment = False
             if newline: res += '\n'
             newline = True
             #res.append(t)
@@ -160,7 +171,7 @@ def parse_syntax(chars: str) -> str:
     nod_tree  = []
     semicolon_nod = nod_tree # hook for coma-semicolon cooperation
     nod_stack = [nod_tree] # current branch of the tree
-    open_nods, open_parenthesis = [nod_tree], 0
+    open_nods, open_parenthesis = [nod_tree], 0 # track open parentheses
     prev_tabs = 0
     # indent_parent is the last node in nod_tree == the nod_stack[1] node
 
@@ -184,7 +195,10 @@ def parse_syntax(chars: str) -> str:
             # so, I need the largest level below t.n in the stack, call it N
             # and nest there with t.n - N depth
             #print(nod_stack)
-            if t.n <= prev_tabs:
+            if t.n == prev_tabs:
+                # just nest into the parent of previous node
+                nod_stack.pop()
+            elif t.n < prev_tabs: # TODO: chack if it works
                 #print("case A")
                 # nest the parent nod of indentation
                 # it is the first after the root node nod_tree
@@ -192,6 +206,7 @@ def parse_syntax(chars: str) -> str:
                 # TODO: check "no-nest" option of tabs
                 #print('open nods:\n%s' % open_nods)
                 #print('stack len: %d' % len(nod_stack))
+
                 while (nod_stack[-1] is not open_nods[-1] and len(nod_stack) > 2):
                     nod_stack.pop()
                 # now nod_stack[-1] == nod_stack[1] == nod_tree[-1]
@@ -202,18 +217,15 @@ def parse_syntax(chars: str) -> str:
                 if len(nod_stack) > 1:
                     assert nod_stack[1] == nod_tree[-1] # just to be sure, it sould be true always
 
-                new_nod = list()
-                nod_stack[-1].append(new_nod)
-                nod_stack.append(new_nod)
-                semicolon_nod = new_nod
-
             else:
                 #print("case B")
                 # just nest the previous node in the stack
-                new_nod = list()
-                nod_stack[-1].append(new_nod)
-                nod_stack.append(new_nod)
-                semicolon_nod = new_nod
+                pass
+
+            new_nod = list()
+            nod_stack[-1].append(new_nod)
+            nod_stack.append(new_nod)
+            semicolon_nod = new_nod
             prev_tabs = t.n
 
         elif t == '\n':
