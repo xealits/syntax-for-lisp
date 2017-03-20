@@ -1,0 +1,10 @@
+use-modules (ice-9 match)
+
+define x '(hello (world))
+
+% (let ((l '(hello (world))))
+match x                       % <- the input object
+	('hello (who))        % <- the pattern
+		display who   % <- the expression evaluated upon matching
+		newline
+
