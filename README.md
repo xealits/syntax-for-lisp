@@ -6,7 +6,7 @@ A bit of syntax for Lisp
 The main idea is from:
 https://pschombe.wordpress.com/2006/04/16/lisp-without-parentheses/
 
-plus the coma and the semicolon.
+plus the colon and the semicolon.
 
 Check it out with `Fish` shell, `guile` Lisp interpreter and `Python3`:
 
@@ -24,17 +24,22 @@ But overall the syntaxis consists of:
 
 * the parentheses,
 * meaningful indentation (a-la Python),
-* the coma works like & in Haskel -- it nests a node in the current one,
+* the colon works like & in Haskel -- it nests a node in the current one,
 * the semicolon means the end of "current node",
 * (TODO) and the backslash \ should cancel the nesting of an indented line.
 * for now comment is from `%` till end of line
+* (TODO) and coma is like backwards colon/haskel-& -- nests the previous symbols in a node
+
+The punctuation should work mostly in-line,
+indentation nests nodes accordingly.
 
 Examples:
 
-	a , b c            = (a (b c))
-	a , b , c ; d , r  = (a (b (c))) (d (r))
+	a : b c            = (a (b c))
+	a : b : c ; d : r  = (a (b (c))) (d (r))
 	a                  = (a (b c))
 		b c
+	a , b c            = ((a) b c)
 
 From the article
 
