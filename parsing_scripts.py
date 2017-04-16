@@ -228,6 +228,9 @@ def parse_syntax(chars: str) -> str:
                 #print("case B")
                 # nest the previous node in the stack
                 # and move the semicolon node
+                while (nod_stack[-1] is not semicolon_nod_stack[-1]):
+                    nod_stack.pop()
+                #print(nod_stack)
                 pass
 
             new_nod = list()

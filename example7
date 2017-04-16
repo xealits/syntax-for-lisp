@@ -1,0 +1,3 @@
+for-each : lambda (x) : begin (display x) (newline)
+	list "foo" "bar"
+
