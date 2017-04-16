@@ -1,13 +1,13 @@
 import logging
 
 examples = [ '  (a b)',
-        'a b c , d e f',
+        'a b c : d e f',
         'a b c ; d e',
         '(a b c ; d e)',
         'a bc ;;; d ; (56 jj)',
         '(a (b c ; d) e)',
         '(a b c (d e (f (g))))',
-        'a b c , d e , f , g',
+        'a b c : d e : f : g',
         '(system* "ls ..")',     # Guile and shell stuff
         '(system* "ls" "..")',
         '(system* "ls ..")',
@@ -15,19 +15,19 @@ examples = [ '  (a b)',
             (lambda (x) (begin (display x) (newline)))
             (string-split (getenv "PATH") #\:))''',
         '''for-each                                                                                                                            
-            (lambda (x) , begin (display x ; newline))
+            (lambda (x) : begin (display x ; newline))
             (string-split (getenv "PATH") #\:)''',
         '''for-each                                                                                                                            
-            (lambda (x) , begin (display x ; newline) ;
+            (lambda (x) : begin (display x ; newline) ;
             string-split (getenv "PATH") #\:)'''
         ]
 
 examples_with_indentation = [ 'a b\n\tc e\n\td',
         '(a\nb\nc)',
-        'a b, c ; ( d\n\n\te )',
-        'a b, c ; ( d\nfoo\n\te )']
+        'a b: c ; ( d\n\n\te )',
+        'a b: c ; ( d\nfoo\n\te )']
 
-special_tokens = [',', ';', '\t', '\n', '(', ')']
+special_tokens = [':', ';', '\t', '\n', '(', ')']
 
 # I cannot just tokenize
 # I need to parse indentations
@@ -38,7 +38,7 @@ def tokenize(chars):
 '''
 
 # ok, first version without any indentations
-# just coma and semi-colon
+# just (coma) colon and semi-colon
 def parse_line(line: str) -> str:
     '''parse_line(line)
 
@@ -169,7 +169,7 @@ def parse_syntax(chars: str) -> str:
     logging.debug('syntax tokens:%s' % tokens)
 
     nod_tree  = []
-    semicolon_nod = nod_tree # hook for coma-semicolon cooperation
+    semicolon_nod_stack = [nod_tree] # hook for (coma)colon-semicolon cooperation
     nod_stack = [nod_tree] # current branch of the tree
     open_nods, open_parenthesis = [nod_tree], 0 # track open parentheses
     prev_tabs = 0
@@ -185,7 +185,7 @@ def parse_syntax(chars: str) -> str:
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
             open_nods.append(new_nod)
-            semicolon_nod = new_nod
+            semicolon_nod_stack.append(new_nod)
             open_parenthesis += 1
             # parentheses should somehow work above other syntaxis, but how?
             #indent_parent, indent_prev, prev_tabs = nod_tree, nod_tree, 0
@@ -196,8 +196,15 @@ def parse_syntax(chars: str) -> str:
             # and nest there with t.n - N depth
             #print(nod_stack)
             if t.n == prev_tabs:
+                # the previous tab-node ended and it's a new one
                 # just nest into the parent of previous node
+                # plus close all current open colons
+                # thus it should be the same as getting to semicolon_nod?
+                while (nod_stack[-1] is not semicolon_nod_stack[-1]):
+                    nod_stack.pop()
+                # and move to parent
                 nod_stack.pop()
+
             elif t.n < prev_tabs: # TODO: chack if it works
                 #print("case A")
                 # nest the parent nod of indentation
@@ -219,13 +226,14 @@ def parse_syntax(chars: str) -> str:
 
             else:
                 #print("case B")
-                # just nest the previous node in the stack
+                # nest the previous node in the stack
+                # and move the semicolon node
                 pass
 
             new_nod = list()
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod)
-            semicolon_nod = new_nod
+            semicolon_nod_stack[-1] = new_nod # so the tab-node is semicolon node
             prev_tabs = t.n
 
         elif t == '\n':
@@ -235,18 +243,18 @@ def parse_syntax(chars: str) -> str:
                 # pop the stack untill the open_nod
                 while (nod_stack[-1] is not open_nods[-1]):
                     nod_stack.pop()
-                semicolon_nod = nod_stack[-1]
+                semicolon_nod_stack[-1] = nod_stack[-1]
             # otherwise the current node parsing has ended
             # block of tabs ended
             # reset stuff
             else:
-                semicolon_nod, nod_stack = nod_tree, [nod_tree]
+                semicolon_nod_stack[-1], nod_stack = nod_tree, [nod_tree]
 
             # in any case the tabs have ended
             prev_tabs = 0
 
-        elif t == ',':
-            # coma nests in current node, but doesn't move the semicolon hook
+        elif t == ':':
+            # (coma^W) colon nests in current node, but doesn't move the semicolon hook
             new_nod = list()
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
@@ -256,7 +264,7 @@ def parse_syntax(chars: str) -> str:
             # and it nests new node in the semicolon node
             # (a ; b)? TODO: this will break on different levels of nesting
             #  a ; b?
-            while (nod_stack[-1] is not semicolon_nod):
+            while (nod_stack[-1] is not semicolon_nod_stack[-1]):
                 nod_stack.pop()
             # and move to parent
             nod_stack.pop()
@@ -285,7 +293,8 @@ def parse_syntax(chars: str) -> str:
                 nod_stack.pop()
             nod_stack.pop() # and close the open node
             open_nods.pop()
-            semicolon_nod = nod_stack[-1]
+            #semicolon_nod = nod_stack[-1]
+            semicolon_nod_stack.pop()
 
         # cases for not special tokens
         elif len(nod_stack) == 1:
@@ -294,7 +303,7 @@ def parse_syntax(chars: str) -> str:
             new_nod = [t]
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod)
-            semicolon_nod = new_nod
+            semicolon_nod_stack.append(new_nod)
         else:
             # just add the symbol to the last nod
             #print(nod_stack)
