@@ -1,0 +1,5 @@
+for e in (ls example*)
+    echo $e
+    racket -e (python3 parsing_scripts.py $e )
+end
+

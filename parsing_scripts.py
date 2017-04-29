@@ -27,76 +27,6 @@ examples_with_indentation = [ 'a b\n\tc e\n\td',
         'a b: c ; ( d\n\n\te )',
         'a b: c ; ( d\nfoo\n\te )']
 
-special_tokens = [':', ';', '\t', '\n', '(', ')']
-
-# I cannot just tokenize
-# I need to parse indentations
-'''
-def tokenize(chars):
-    "Convert a string of characters into a list of tokens."
-    return chars.replace('(', ' ( ').replace(')', ' ) ').split()
-'''
-
-# ok, first version without any indentations
-# just (coma) colon and semi-colon
-def parse_line(line: str) -> str:
-    '''parse_line(line)
-
-    returns a string with a propper lisp-node,
-    where the lispy-syntax of line is substituted by parentheses where needed
-
-    'X ; Y'   -> '(X) (Y)' --- splits the line into several nodes
-    '(X ; Y)' -> '(X) (Y)'
-    ' , XtillEnd' -> ' ( XtillEnd )' --- makes a node of the rest of the line, until the end or semicolon
-    '''
-
-    tokens = line.replace('(', ' ( ').replace(')', ' ) ').split()
-    # splits on ' , ' and ' ; ' as well
-    # ,,, and ;;; are not considered tokens
-
-    removed_tracing_semicolons = []
-    prev_token = None
-    for t in tokens:
-        if t == ';' == prev_token:
-            continue
-        removed_tracing_semicolons.append(t)
-
-    tokens = removed_tracing_semicolons
-
-    #print(tokens)
-
-    res = "" # TODO: if input doesn't start with parent -- add it right now?
-    coma_nests = [0]
-    for t in tokens:
-        if t == ',':
-            # add a coma-nest, thus the parent
-            res += '('
-            coma_nests[-1] += 1
-        elif t in ';)':
-            # finish possible coma nests
-            if len(coma_nests):
-                res += '%s' % (coma_nests[-1]*')')
-                coma_nests.pop()
-            if t == ';': # close the current node and open new one
-                res += ')('
-            else:        # just close the current node
-                res += ')' # could just add this token, as in regular case
-        elif t == '(':
-                # new node for ; and ,
-                # thus the new record for coma nests
-                coma_nests.append(0)
-                res += '('
-        else:
-            res += ' %s ' % t
-
-    # and if the first token wasn't (
-    # the top-level node has to be added
-    if tokens[0] != '(':
-        res = '(%s)' % res
-
-    return res
-
-
 class Tabs:
     def __init__(self, n):
         self.n = n
@@ -105,7 +35,14 @@ class Tabs:
     def __repr__(self):
         return "Tabs(%d)" % self.n
 
-syntax_tokens = ['(', ')', '\n', '\t', ';', ',', '%']
+syntax_tokens = ['(', ')', '\n', '\t', ';', ',', ':', '%']
+syntax_tokens_to_pad = ['(', ')', '\n', '\t', ';', ',', '%']
+# , works as & in Haskell but doesn't span to new tab-lines
+# : works the same but does wrap the following tab-lines
+# quote :
+#       a b c
+#       + 1 2
+# = (quote ((a b c) (+ 1 2)))
 
 def parse_tokens(chars: str) -> 'list(str)':
     '''parse_tokens(line: str) -> 'list(str)'
@@ -117,7 +54,7 @@ def parse_tokens(chars: str) -> 'list(str)':
     'a b\nc'  -> ['a', 'b', '\n', 'c']
     '''
 
-    for t in syntax_tokens:
+    for t in syntax_tokens_to_pad:
         chars = chars.replace(t, ' %s ' % t)
 
     #print('pre-tokens:\n%s' % chars)
@@ -256,11 +193,19 @@ def parse_syntax(chars: str) -> str:
             # in any case the tabs have ended
             prev_tabs = 0
 
-        elif t == ':':
-            # (coma^W) colon nests in current node, but doesn't move the semicolon hook
+
+        elif t == ',':
+            # coma nests in current node, but doesn't move the semicolon hook
             new_nod = list()
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
+        elif t == ':':
+            # (coma^W) colon nests in current node and moves the semicolon hook
+            new_nod = list()
+            nod_stack[-1].append(new_nod)
+            nod_stack.append(new_nod) # don't forget to grow the stack
+            semicolon_nod_stack.append(new_nod)
+
         elif t == ';':
             # semicolon finishes its' node
             # it should move the head of the stack to the semicolon node

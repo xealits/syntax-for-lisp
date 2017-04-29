@@ -8,7 +8,7 @@ newline
 % TODO: add check for PATTERN variable
 % or command-line input
 
-define dir : opendir "."
+define dir , opendir "."
 do
 	(entry (readdir dir) (readdir dir))
 	(eof-object? entry)

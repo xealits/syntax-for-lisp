@@ -1,0 +1,13 @@
+define prog
+	quote :
+		+ 1 2
+		a b c
+% in principle, according to the article, this should work with two indentations
+%quote
+%		+ 1 2
+%		a b c
+% but it's a bit unclear to see then...
+
+display prog
+newline
+
