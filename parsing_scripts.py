@@ -1,4 +1,5 @@
 import logging
+import re
 
 examples = [ '  (a b)',
         'a b c : d e f',
@@ -54,13 +55,21 @@ def parse_tokens(chars: str) -> 'list(str)':
     'a b\nc'  -> ['a', 'b', '\n', 'c']
     '''
 
+    # now there is a problem with tabs:
+    # rlwrap eats them (a commandline-builder utility)
+    # ... so
+    # I'll accept spaces as input,
+    # but they are splited on later
+    # thus I'll parse them first and turn into tabs
+    pattern = re.compile('\n[ ]+')
+    for i in pattern.finditer(chars):
+        a, b = i.span()
+        n_spaces = b - a - 1
+        # the worst part:
+        chars = chars[:a+1] + '\t'*n_spaces + chars[b:]
+
     for t in syntax_tokens_to_pad:
         chars = chars.replace(t, ' %s ' % t)
-
-    #print('pre-tokens:\n%s' % chars)
-
-    # merge trailing tabs after \n
-    # remove others
 
     res = []
     newline = False
