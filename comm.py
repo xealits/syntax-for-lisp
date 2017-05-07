@@ -27,6 +27,10 @@ def input_multi(prompt="> "):
 def is_CAPSLOCK():
     return subprocess.getoutput('xset q | grep LED')[-1] == '1'
 
+interpreter_commlines = {'guile': "guile -c '%s'",
+        'racket': "racket -e '%s'"}
+#out = subprocess.getoutput("%s -c '%s'" % (intr, parsed_prog_string))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class = argparse.RawDescriptionHelpFormatter,
@@ -45,6 +49,7 @@ if __name__ == '__main__':
     logging.debug(args)
     logging.debug(args.interpreter)
     intr = args.interpreter
+    comm_line = interpreter_commlines[intr]
 
     # multicommands should be done with rlwrap
     # but it eats tabs...
@@ -62,6 +67,6 @@ if __name__ == '__main__':
             logging.debug('nods:%s' % nod_tree)
             parsed_prog_string = nod_tree_to_string(nod_tree)
             logging.debug('pros_str:%s' % parsed_prog_string)
-            out = subprocess.getoutput("%s -c '%s'" % (intr, parsed_prog_string))
+            out = subprocess.getoutput(comm_line % parsed_prog_string)
             print(out)
 

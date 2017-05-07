@@ -88,6 +88,18 @@ or
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 Examples
 ========
 
@@ -349,5 +361,100 @@ Maybe just a quote without parentheses quotes from here till the end of the node
 
 
 
+Pipelines of function calls?
+----------------------------
+
+A-la shell `ls -la | grep foo`.
+It is a stream of bytes, from `stdout` to `stdin`.
+(Special constructions and conventions of Unix, among other particulars.)
+It's not the only semantics, there are other needs:
+
+    find .. | xargs ls
+    ls -tal `find all logs` # prints the last touched logs
+
+But it is handy, it is cooperation of processes,
+it is construction of a larger program from particular pieces.
+(Each program is like a function of a library.)
+It's an interesting example to consider.
+So how to do it?
+
+First aid is to use composition of two functions.
+The piping basically is composition.
+Add convenient syntax and it will substitute the pipe.
+
+Assume some programming objects (`stdin/out`)?
+Don't assume. Everything should be visible.
+But if visible -- more key strokes?
+Not necessary -- the pipe symbol is still there in the shell-s.
+
+The problem is the "reverse" order of function calls:
+
+    final_call A (second_call B (initial_call C))
+
+-- sometimes it looks awkward.
+
+Inverse Polish notation and stuff..
+
+**On practice, one wants to test the calls in order, adding steps one by one.**
+And the function calls break this.
+
+From design/utility point of view,
+the call-tree (s-expression of lisp) describes the call completely,
+from leaves (the first calls) to the root (final call),
+when the pipelines are more "automaton-like" description of current processing,
+whithout regarding the previous or following stuff.
+Also the pipeline is concurrent cooperation of several processes with some protocol:
+whenever each process gets something in stdin it works on it and outputs to stdout.
+{The processes-stuff maybe fits into functions with lazy evaluation.}
+**But really this doesn't matter**,
+the only important point is where each process gets its' inputs from,
+how it processes it, whether it waits for the end of input or not, is buisness of the process,
+and the only problem on practice we have is exactly the necessity
+to easily run parts of the pipeline in order.
+The hierarchy look of the tree of calls is also not that important:
+it can be "flattened" along one line of branches etc.
+
+Самый простой способ это вставить какой-то символ для "последнего вывода",
+как `_` в Python:
+
+    initial_call C
+    second_call B _
+    final_call A _
+    # или
+    initial_call C ; second_call B _ ; final_call A _
+    # можно и быстро tee устроить, т.е. разветвлять один вывод в несколько процессов:
+    initial_call C ; \(second_call B _ ; final_call A _)
+    (initial_call C) \((second_call B _) (final_call A _))
+    # \((foo) (bar)) обозначает не полную цитату, фуу/бар испольняются и помещяются в список
+    # как (list (foo) (bar))
+
+-- это можно и в функциональном смысле читать,
+точно как сочетание вложенных вызовов, подстановка ссылок на выводы одних процессов на вводы другим.
+
+В итоге это таки подразумеваемая переменная.
+Но вывод функций никак не выделялся/не формулировался до этого -- тут он учтён.
+
+Вообще, тут есть что-то от кэрринга -- какое-то правило создания "неполных функций" и их применения:
+
+    define (a a1 a2) : ...
+    a X   = (a X) = lambda (a2) ...
+
+Тогда "перевёрнутый" порядок вызова с композицией функций выглядит:
+
+    cat f * a -l
+    cat f | a -l  # типа | это оператор "или" из С
+
+Тут | работает как нестандартный вызов:
+
+    # не просто
+    ((cat f) (a -l))
+    # а
+    (compose (cat f) (a -l))
+    # или проще
+    ((a -l) (cat f))
+    #
+    (call-on (cat f) (a -l))
+
+(При этом, кстати, `(cat f)` это функция с 0 аргументов.)
 
 

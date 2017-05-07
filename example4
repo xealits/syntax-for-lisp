@@ -1,3 +1,5 @@
+% guile implementation of ls current directory
+
 define dir , opendir "."
 do
 	(entry (readdir dir) (readdir dir))
