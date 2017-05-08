@@ -1,5 +1,7 @@
 import logging
 import re
+import argparse
+
 
 examples = [ '  (a b)',
         'a b c : d e f',
@@ -277,21 +279,29 @@ def nod_tree_to_string(nod_tree: list) -> str:
 
 
 if __name__ == '__main__':
-    from sys import argv
-    assert len(argv) > 1
+    parser = argparse.ArgumentParser(
+        formatter_class = argparse.RawDescriptionHelpFormatter,
+        description = "parsing utility for syntaxed lisp",
+        epilog = "Example:\n$ python3 parsing_scripts.py example4"
+        )
 
-    i = 1 # when input starts
-    if argv[1] == '-d':
+    parser.add_argument('script', help="the filename of the syntaxed-lisp script to execute")
+    parser.add_argument('-d', '--debug', help="level of loggin = DEBUG", action="store_true")
+    parser.add_argument('-o', '--options', nargs='*', help="options to pass to the script")
+
+    args = parser.parse_args()
+
+    if args.debug:
         logging.basicConfig(level=logging.DEBUG)
-        i += 1
 
-    logging.info(argv)
+    logging.debug(args)
+    logging.debug(args.options)
 
-    if argv[i] == '-c':
-        inp = argv[i+1]
-    else:
-        with open(argv[i]) as f:
-            inp = f.read()
+    with open(args.script) as f:
+        inp = f.read()
+
+    # pass options if any
+    inp = inp.format(options = ' '.join(args.options) if args.options else "")
 
     logging.debug('inp:%s' % inp)
     nod_tree = parse_syntax(inp)

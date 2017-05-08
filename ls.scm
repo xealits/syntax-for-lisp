@@ -10,23 +10,30 @@
 %; need variable amount of args* here
 %; to convert symbols to strings use: symbol->string
 
-%; would be better to do `foldl append` and `map` in 1 go
-
-
-%;    foldl append (list) , map (compose foo symbol->string) targets
-
-%; sadly you cannot use `,` as a symbol in racket: (quote (. ..))
-%; but '(./) works
 
 define (compose f g) : lambda (x)
     f , g x
-define (foo t)
+
+%; foo returns a list of contents for a target path
+%; list of the filename if path to a file is given
+%; list of content filenames if directory parh is given
+%; empty list if a given path doesnt sxist
+define (foo t) %; TODO: pattern matching is neded here
     if (file-exists? t) (list t)
         if (directory-exists? t) (directory-list t) (list) 
-define (ls targets) : begin
-    display targets
-    newline
-    foldl append (list) , map foo targets
-%; this should work now:
-display , ls , quote , "." ".." "/home/"
+
+%; ls loops through targets and returns a merged list of their contents
+define (ls targets)
+    foldl append (list) , map (compose foo symbol->string) targets
+%;    foldl append (list) , map foo targets
+%; would be better to do `foldl append` and `map` in 1 go
+
+%; handling commandline inputs
+%; sadly you cannot use `,` as a symbol in racket: (quote (. ..))
+%; but '(./) works
+define options , quote , {options}
+define input , if (empty? options) (quote , ./) options
+
+display , ls input
+
 

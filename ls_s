@@ -1,0 +1,5 @@
+#!/usr/bin/fish
+
+#echo $argv
+racket -e (python3 parsing_scripts.py ls.scm -o $argv)
+
