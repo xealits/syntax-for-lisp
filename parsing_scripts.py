@@ -278,6 +278,13 @@ def nod_tree_to_string(nod_tree: list) -> str:
     return ''.join([' %s ' % nod if type(nod) is str else '(%s)' % nod_tree_to_string(nod) for nod in nod_tree])
 
 
+def nod_tree_to_list(nod_tree: list) -> list:
+    '''nod_tree_to_list(nod_tree: list) -> list:
+
+    return list of top nodes, i.e. all consequtive commands in the program
+    '''
+    return [' %s ' % nod if type(nod) is str else '(%s)' % nod_tree_to_string(nod) for nod in nod_tree]
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class = argparse.RawDescriptionHelpFormatter,

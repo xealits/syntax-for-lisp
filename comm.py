@@ -82,9 +82,10 @@ need to:
            analyzer.expect('> ')
            print(analyzer.before)
 
+   it does work kind of -- sometimes input and "expect" desynchronize
 """
 
-from parsing_scripts import parse_syntax, nod_tree_to_string
+from parsing_scripts import parse_syntax, nod_tree_to_list
 import logging, argparse
 import subprocess
 import pexpect
@@ -147,13 +148,6 @@ if __name__ == '__main__':
     else:
         lisp_interpreter = None
 
-    #   for newWord in ['слово','сработай'] :
-    #       print('Trying', newWord, '...')
-    #       analyzer.sendline( newWord )
-    #       analyzer.expect(lisp_prompt)
-    #       print(analyzer.before)
-
-
     # multicommands should be done with rlwrap
     # but it eats tabs...
     while True:
@@ -172,15 +166,16 @@ if __name__ == '__main__':
         if inp.strip():
             nod_tree = parse_syntax(inp)
             logging.debug('nods:%s' % nod_tree)
-            parsed_prog_string = nod_tree_to_string(nod_tree)
-            logging.debug('pros_str:%s' % parsed_prog_string)
+            parsed_prog = nod_tree_to_list(nod_tree)
+            logging.debug('pros_str:%s' % parsed_prog)
 
             if lisp_interpreter:
-                lisp_interpreter.sendline(parsed_prog_string) # if I pass several commands I need to expect several outputs
-                lisp_interpreter.expect(lisp_prompt)
-                print(lisp_interpreter.before)
+                for command in parsed_prog:
+                    lisp_interpreter.sendline(command) # if I pass several commands I need to expect several outputs
+                    lisp_interpreter.expect(lisp_prompt)
+                    print(lisp_interpreter.before)
             else:
                 # echo behavior
-                print(parsed_prog_string)
+                print(parsed_prog)
                 logging.debug("echo")
 
