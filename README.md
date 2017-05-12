@@ -17,7 +17,7 @@ or:
 	rlwrap python3 comm.py -i echo | racket
 	rlwrap python3 comm.py -i echo | tee /dev/fd/2 | racket
 	<CAPSLOCK>FILE ls.syntax<ENTER>
-	ls '/home '..
+	ls /home ..
 	<CAPSLOCK>EXIT<ENTER>
 
 -- second option shows what is actually passed to `racket`.
