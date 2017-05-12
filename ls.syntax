@@ -31,9 +31,9 @@ define (ls targets)
 %; handling commandline inputs
 %; sadly you cannot use `,` as a symbol in racket: (quote (. ..))
 %; but '(./) works
-define options , quote , {options}
-define input , if (empty? options) (quote , ./) options
-
-display , ls input
+%;define options , quote , {options}
+%;define input , if (empty? options) (quote , ./) options
+%;
+%;display , ls input
 
 

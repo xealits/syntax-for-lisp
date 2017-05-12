@@ -108,12 +108,18 @@ if __name__ == '__main__':
         # if CAPSLOCK is on the command goes to the shell itself
         if is_CAPSLOCK():
             logging.debug('CAPS inp:%s' % inp)
-            if inp.strip() == 'EXIT':
+            inp = inp.strip()
+            if inp == 'EXIT':
                 break
-            elif inp.strip() == 'F' and lisp_interpreter:
+            elif inp == 'F' and lisp_interpreter:
                 lisp_interpreter.expect(lisp_prompt)
                 print(lisp_interpreter.before)
                 continue
+            elif 'FILE' in inp: # source input from the file
+                _, filename = inp.split()
+                with open(filename) as f:
+                    inp = f.read()
+                # TODO: handle NoFile exception
 
         logging.debug('inp:%s' % inp)
         if inp.strip():
