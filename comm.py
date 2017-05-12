@@ -13,83 +13,33 @@ need to:
 
    --- this simple splitting is kind of easy to do with /proc/PID/fd/
        but not with commandline utilities (the unix tradition..)
- * spawning a process you need to kill it afterwards etc..
-   thus I'll connect to a given PID (if the interpreter option isnumeric())
-   and use its' /proc/PID/fd for input/output
-   ...
-   but starting a process on shell means binding stdin/stdout of the shell to it
-   also reading stdout blocks...
-   ..asynchronous unix...
-   ...very logical, rational unix tradition...very usable in development of very diverse stuff..
 
-   actually:
+       I need to split the output of comm.py:
+           the scheme interpreter gets only parsed syntax,
+           thus comm.py send only parsed result on stdout,
+           debug and prompt go to stderr
 
-       $ ls /proc/17279/fd -l
-       total 0
-       lrwx------ 1 alex alex 64 May 10 20:07 0 -> /dev/pts/4
-       lrwx------ 1 alex alex 64 May 10 20:07 1 -> /dev/pts/4
-       lrwx------ 1 alex alex 64 May 10 20:07 2 -> /dev/pts/4
-       lr-x------ 1 alex alex 64 May 10 20:09 3 -> /proc/17279/maps
-       lr-x------ 1 alex alex 64 May 10 20:09 4 -> pipe:[425871]
-       l-wx------ 1 alex alex 64 May 10 20:09 5 -> pipe:[425871]
-       lrwx------ 1 alex alex 64 May 10 20:09 6 -> anon_inode:[eventpoll]
-       lr-x------ 1 alex alex 64 May 10 20:09 7 -> /dev/null
-
-   the terminal stuff kicks in...
-
-   so, fork it is..
-
-       from subprocess import Popen, PIPE, STDOUT
-       p = Popen(['racket'], stdout=PIPE, stdin=PIPE, stderr=PIPE)
-       stdout_data = p.communicate(input='(+ 1 2)')[0]
-
-   -- no, .communicate is for 1-time message in, message out
-
-   p.stdin and p.stdout can be made NONBLOCK
-   but now I send stuff to stdin and get nothing from stdout...
-   but it doesn't block indeed
-
-       >>> p = Popen(['racket'], stdout=PIPE, stdin=PIPE, stderr=PIPE)
-       >>> fd = p.stdout.fileno()
-       >>> fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-       >>> fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-       0
-       >>> p.stdin.write(b'(+ 1 2)\n')
-       8
-       >>> p.stdout.read()
-       b'Welcome to Racket v5.3.6.\n> '
-       >>> p.stdout.read()
-       >>> 
-       >>> p.stdout.read()
-       >>> p.stdout.read()
-       >>> p.stdin.write(b'(+ 1 2)\n')
-       8
-       >>> p.stdout.read()
-
-   unix -- everything is hardcoded, not hardwired
-
-   the last hope is module pexpect
-   example:
-
-       import pexpect
-       
-       analyzer = pexpect.spawnu('hfst-lookup analyser-gt-desc.hfstol')
-       analyzer.expect('> ')
-       
-       for newWord in ['слово','сработай'] :
-           print('Trying', newWord, '...')
-           analyzer.sendline( newWord )
-           analyzer.expect('> ')
-           print(analyzer.before)
-
-   it does work kind of -- sometimes input and "expect" desynchronize
+       1) It seems logging sends stuff to stderr by default.
+       2) Racket, guile and mit-scheme work well with pipe. (Guile unnecessary clears the prompt..)
+       All ok!
 """
 
-from parsing_scripts import parse_syntax, nod_tree_to_list
+from parsing_scripts import parse_syntax, nod_tree_to_list, nod_tree_to_string
 import logging, argparse
 import subprocess
 import pexpect
+import builtins, sys
 
+
+def input(prompt=None):
+    """input(prompt=None)
+
+    redefining the builtin 'input' to write the prompt to stderr
+    since stdout is used for parsed syntax only
+    """
+    if prompt:
+        sys.stderr.write(str(prompt))
+    return builtins.input()
 
 def input_multi(prompt="> "):
     '''input_ext(prompt="> ")
@@ -122,7 +72,8 @@ if __name__ == '__main__':
         epilog = "Example:\n$ python comm.py --interpreter racket"
         )
 
-    parser.add_argument('-i', '--interpreter', help="the name of the lisp interpreter executable\nor 'echo' for test of syntax parsing", default="racket")
+    parser.add_argument('-i', '--interpreter',
+            help="the name of the lisp interpreter executable\nor 'echo' for testing the syntax parsing or passing to pipe via stdout", default="echo")
     parser.add_argument('-d', '--debug', help="level of loggin = DEBUG", action="store_true")
 
     args = parser.parse_args()
@@ -145,13 +96,15 @@ if __name__ == '__main__':
         # then spawn
         lisp_interpreter = pexpect.spawnu(intr)
         lisp_interpreter.expect(lisp_prompt) # here I need the prompt of the interpreter, racket uses '> ', guile 'scheme@(guile-user)> '
+        inp_prompt = 'com> '
     else:
         lisp_interpreter = None
+        inp_prompt = ''
 
     # multicommands should be done with rlwrap
     # but it eats tabs...
     while True:
-        inp = input_multi('com> ')
+        inp = input_multi(inp_prompt)
         # if CAPSLOCK is on the command goes to the shell itself
         if is_CAPSLOCK():
             logging.debug('CAPS inp:%s' % inp)
@@ -166,16 +119,17 @@ if __name__ == '__main__':
         if inp.strip():
             nod_tree = parse_syntax(inp)
             logging.debug('nods:%s' % nod_tree)
-            parsed_prog = nod_tree_to_list(nod_tree)
-            logging.debug('pros_str:%s' % parsed_prog)
 
             if lisp_interpreter:
+                parsed_prog = nod_tree_to_list(nod_tree)
+                logging.debug('parsed_prog:%s' % parsed_prog)
                 for command in parsed_prog:
                     lisp_interpreter.sendline(command) # if I pass several commands I need to expect several outputs
                     lisp_interpreter.expect(lisp_prompt)
                     print(lisp_interpreter.before)
             else:
                 # echo behavior
-                print(parsed_prog)
-                logging.debug("echo")
+                parsed_str = nod_tree_to_string(nod_tree)
+                print(parsed_str)
+                logging.debug("echo parsed_str:%s" % parsed_str)
 

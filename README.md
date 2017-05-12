@@ -12,6 +12,14 @@ Check it out with `Fish` shell, `guile` Lisp interpreter and `Python3`:
 
 	guile -c (python3 parsing_scripts.py example1)
 
+or:
+
+	rlwrap python3 comm.py -i echo | racket
+	rlwrap python3 comm.py -i echo | tee /dev/fd/2 | racket
+
+-- second option shows what is actually passed to `racket`.
+It uses Linux's (and Mac OSX' and FreeBSD's etc) `/dev/fd/2` symlink to current `stderr` (also `/dev/stderr`).
+
 
 
 
