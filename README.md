@@ -16,6 +16,9 @@ or:
 
 	rlwrap python3 comm.py -i echo | racket
 	rlwrap python3 comm.py -i echo | tee /dev/fd/2 | racket
+	<CAPSLOCK>FILE ls.syntax<ENTER>
+	ls '/home '..
+	<CAPSLOCK>EXIT<ENTER>
 
 -- second option shows what is actually passed to `racket`.
 It uses Linux's (and Mac OSX' and FreeBSD's etc) `/dev/fd/2` symlink to current `stderr` (also `/dev/stderr`).

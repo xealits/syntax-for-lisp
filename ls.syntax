@@ -23,7 +23,7 @@ define (foo t) %; TODO: pattern matching is neded here
         if (directory-exists? t) (directory-list t) (list) 
 
 %; ls loops through targets and returns a merged list of their contents
-define (ls targets)
+define (ls . targets) %; now ls accepts any number of argument, targets is the list containing them
     foldl append (list) , map (compose foo symbol->string) targets
 %;    foldl append (list) , map foo targets
 %; would be better to do `foldl append` and `map` in 1 go
