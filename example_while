@@ -1,0 +1,5 @@
+define-syntax while
+  syntax-rules ()
+    (while condition body ...)
+        let loop ()
+            if condition (begin body ...  (loop)) #f

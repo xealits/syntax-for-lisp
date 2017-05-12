@@ -30,6 +30,19 @@ examples_with_indentation = [ 'a b\n\tc e\n\td',
         'a b: c ; ( d\n\n\te )',
         'a b: c ; ( d\nfoo\n\te )']
 
+class MyList(list):
+    '''list class which accepts all dynamic attributes:
+
+    >>> l = MyList((1, 3, 4))
+    >>> l
+    [1, 3, 4]
+    >>> l.foo = 5
+    >>> l.foo
+    5
+    '''
+    pass
+    # TODO: def __init__ with keyword-only ntabs for setting tabs, other params --> to super(blah).__init__() somehow
+
 class Tabs:
     def __init__(self, n):
         self.n = n
@@ -116,34 +129,41 @@ def parse_syntax(chars: str) -> str:
     tokens = parse_tokens(chars)
     logging.debug('syntax tokens:%s' % tokens)
 
-    nod_tree  = []
-    semicolon_nod_stack = [nod_tree] # hook for (coma)colon-semicolon cooperation
-    nod_stack = [nod_tree] # current branch of the tree
-    open_nods, open_parenthesis = [nod_tree], 0 # track open parentheses
-    prev_tabs = 0
+    nod_tree  = MyList()
+    nod_tree.n = 0
+    semicolon_nod_stack = MyList(nod_tree) # hook for (coma)colon-semicolon cooperation
+    nod_stack = MyList([nod_tree]) # current branch of the tree
+    open_nods, open_parenthesis = MyList(nod_tree), 0 # track open parentheses
+    current_tabs = 0
     # indent_parent is the last node in nod_tree == the nod_stack[1] node
 
     for i, t in enumerate(tokens):
-        #print(t)
-        #print(len(nod_stack))
+        #logging.debug('nod_stack:%s' % nod_stack)
+
         # cases for special tokens (ifs for now)
         if t == '(':
             # nest new node in the current one
-            new_nod = list()
+            new_nod = MyList()
+            new_nod.n = current_tabs
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
             open_nods.append(new_nod)
             semicolon_nod_stack.append(new_nod)
             open_parenthesis += 1
             # parentheses should somehow work above other syntaxis, but how?
-            #indent_parent, indent_prev, prev_tabs = nod_tree, nod_tree, 0
+            #indent_parent, indent_prev, current_tabs = nod_tree, nod_tree, 0
 
         elif type(t) is Tabs:
+            # I need to store info on N tabs of currenlty opened nodes
+            # in order to handle properly the different levels of tabs in 1 block
+            # since the semicolon nodes are used for tabs now (not open nodes! -- TODO: check what to do with these two)
+            # I'll add it to the semicolon nodes
+
             # nest a node in the stack at depth of t.n
             # so, I need the largest level below t.n in the stack, call it N
             # and nest there with t.n - N depth
             #print(nod_stack)
-            if t.n == prev_tabs:
+            if t.n == current_tabs:
                 # the previous tab-node ended and it's a new one
                 # just nest into the parent of previous node
                 # plus close all current open colons
@@ -153,7 +173,7 @@ def parse_syntax(chars: str) -> str:
                 # and move to parent
                 nod_stack.pop()
 
-            elif t.n < prev_tabs: # TODO: chack if it works
+            elif t.n < current_tabs: # TODO: chack if it works
                 #print("case A")
                 # nest the parent nod of indentation
                 # it is the first after the root node nod_tree
@@ -162,8 +182,20 @@ def parse_syntax(chars: str) -> str:
                 #print('open nods:\n%s' % open_nods)
                 #print('stack len: %d' % len(nod_stack))
 
-                while (nod_stack[-1] is not open_nods[-1] and len(nod_stack) > 2):
+                logging.debug('lesstabs:%d vs %d' % (t.n, nod_stack[-1].n))
+                logging.debug('lesstabs:nod_stack:%s' % nod_stack)
+                # find the father node among nod_stack
+                # the N tabs of father node is < then the current t.n
+                while (nod_stack[-1].n >= t.n and len(nod_stack) > 1):
                     nod_stack.pop()
+                    logging.debug('lesstabs:moveup:%d vs %d' % (t.n, nod_stack[-1].n))
+
+                logging.debug('lesstabs:nod_stack[-1]=%s' % nod_stack[-1])
+                # not sure what is open_nods (probably the open parentheses)
+                # but now "the tab-node is semicolon node"
+                #while (nod_stack[-1] is not semicolon_nod_stack[-1] and len(nod_stack) > 2):
+                #while (nod_stack[-1] is not open_nods[-1] and len(nod_stack) > 2):
+                #    nod_stack.pop()
                 # now nod_stack[-1] == nod_stack[1] == nod_tree[-1]
                 # or nod_stack[-1] == open_node
                 #print('stack len: %d' % len(nod_stack))
@@ -181,11 +213,12 @@ def parse_syntax(chars: str) -> str:
                 #print(nod_stack)
                 pass
 
-            new_nod = list()
+            new_nod = MyList()
+            new_nod.n = t.n
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod)
             semicolon_nod_stack[-1] = new_nod # so the tab-node is semicolon node
-            prev_tabs = t.n
+            current_tabs = t.n
 
         elif t == '\n':
             if open_parenthesis:
@@ -202,17 +235,19 @@ def parse_syntax(chars: str) -> str:
                 semicolon_nod_stack[-1], nod_stack = nod_tree, [nod_tree]
 
             # in any case the tabs have ended
-            prev_tabs = 0
+            current_tabs = 0
 
 
         elif t == ',':
             # coma nests in current node, but doesn't move the semicolon hook
-            new_nod = list()
+            new_nod = MyList()
+            new_nod.n = current_tabs
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
         elif t == ':':
             # (coma^W) colon nests in current node and moves the semicolon hook
-            new_nod = list()
+            new_nod = MyList()
+            new_nod.n = current_tabs
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
             semicolon_nod_stack.append(new_nod)
@@ -228,7 +263,8 @@ def parse_syntax(chars: str) -> str:
             # and move to parent
             nod_stack.pop()
             # and nest new node:
-            new_nod = list()
+            new_nod = MyList()
+            new_nod.n = current_tabs
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod)
             # -- thus colon at the end of a node `(a , b ;)` doesn't make sence
@@ -259,7 +295,8 @@ def parse_syntax(chars: str) -> str:
         elif len(nod_stack) == 1:
             # symbols at root-level open a new node
             #print('nest symbol:\n%s' % t)
-            new_nod = [t]
+            new_nod = MyList([t])
+            new_nod.n = current_tabs # or set to 0?
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod)
             semicolon_nod_stack.append(new_nod)

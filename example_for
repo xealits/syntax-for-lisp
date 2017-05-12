@@ -1,0 +1,6 @@
+define-syntax for
+    syntax-rules (in as)
+        (for element in list body ...)
+            map (lambda (element) body ...) list
+        (for list as element body ...)
+            for element in list body ...
