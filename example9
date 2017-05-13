@@ -5,5 +5,5 @@ define prog
 		* x 4
 		)
 
-for-each (lambda (x) : begin (display (eval x)) (newline)) prog
+for-each (lambda (x) & begin (display (eval x)) (newline)) prog
 

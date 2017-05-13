@@ -280,14 +280,25 @@ def parse_syntax(chars: str) -> str:
             #nod_stack[-1] = new_nod # set current node in the stack
             current_node.clear()
             current_node.append(new_nod)
+
         elif t == ':':
-            # colon nests in current node until the end of the line
-            # i.e. it doesn't move the semicolon hook
+            # colon nests in current node {until the end of the line? i.e. it doesn't move the semicolon hook?}
+            # spanning to new lines through tabs
+            # i.e. move the semicolon hook
+            # -- spanning lines is more different syntax,
+            #    inline can be done just with parentheses or add Haskel's &
             new_nod = MyList()
             new_nod.n = current_tabs
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
-            #semicolon_nod_stack.append(new_nod)
+            semicolon_nod_stack.append(new_nod) # move the semicolon hook
+        elif t == '&':
+            # Haskel's & works like colon, but inine-only
+            new_nod = MyList()
+            new_nod.n = current_tabs
+            nod_stack[-1].append(new_nod)
+            nod_stack.append(new_nod) # don't forget to grow the stack
+            #semicolon_nod_stack.append(new_nod) # don't move the semicolon hook
 
         elif t == ';':
             # semicolon finishes its' node
