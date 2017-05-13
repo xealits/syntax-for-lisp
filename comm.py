@@ -45,6 +45,7 @@ def input_multi(prompt="> "):
     '''input_ext(prompt="> ")
 
     should work as multiline input
+    exits on empty line (two newlines '\n\n')
     '''
 
     line = input(prompt)
@@ -69,11 +70,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class = argparse.RawDescriptionHelpFormatter,
         description = "a sketch of a shell for synax-lisp",
-        epilog = "Example:\n$ python comm.py --interpreter racket"
+        epilog = "Example:\n$ python3 comm.py | racket"
         )
 
-    parser.add_argument('-i', '--interpreter',
-            help="the name of the lisp interpreter executable\nor 'echo' for testing the syntax parsing or passing to pipe via stdout", default="echo")
     parser.add_argument('-d', '--debug', help="level of loggin = DEBUG", action="store_true")
 
     args = parser.parse_args()
@@ -82,60 +81,27 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.DEBUG)
 
     logging.debug(args)
-    logging.debug(args.interpreter)
-    intr = args.interpreter
-    #comm_line = interpreter_commlines.get(intr) # None for connected run
-
-    # no, this doesn't work
-    #if intr == "external": # fork a process and write/read its' stdin/stdout
-        #flags = os.O_RDONLY | os.O_NONBLOCK
-        #stdin = open('/proc/'+intr+'/fd/0', 'w')
-        #stdout, stderr = (os.open('/proc/'+intr+'/fd/%s' % i, flags) for i in (1, 2))
-    # spawning an interpreter with pexpect
-    if not intr == "echo":
-        # then spawn
-        lisp_interpreter = pexpect.spawnu(intr)
-        lisp_interpreter.expect(lisp_prompt) # here I need the prompt of the interpreter, racket uses '> ', guile 'scheme@(guile-user)> '
-        inp_prompt = 'com> '
-    else:
-        lisp_interpreter = None
-        inp_prompt = ''
 
     # multicommands should be done with rlwrap
     # but it eats tabs...
     while True:
-        inp = input_multi(inp_prompt)
+        inp = input_multi('')
         # if CAPSLOCK is on the command goes to the shell itself
-        if is_CAPSLOCK():
-            logging.debug('CAPS inp:%s' % inp)
-            inp = inp.strip()
-            if inp == 'EXIT':
-                break
-            elif inp == 'F' and lisp_interpreter:
-                lisp_interpreter.expect(lisp_prompt)
-                print(lisp_interpreter.before)
-                continue
-            elif 'FILE' in inp: # source input from the file
-                _, filename = inp.split()
-                with open(filename) as f:
-                    inp = f.read()
-                # TODO: handle NoFile exception
+        inp = inp.strip()
+        if inp == 'EXIT':
+            break
+        elif 'FILE' in inp: # source input from the file
+            _, filename = inp.split()
+            with open(filename) as f:
+                inp = f.read()
+            # TODO: handle NoFile exception
 
         logging.debug('inp:%s' % inp)
         if inp.strip():
             nod_tree = parse_syntax(inp)
             logging.debug('nods:%s' % nod_tree)
-
-            if lisp_interpreter:
-                parsed_prog = nod_tree_to_list(nod_tree)
-                logging.debug('parsed_prog:%s' % parsed_prog)
-                for command in parsed_prog:
-                    lisp_interpreter.sendline(command) # if I pass several commands I need to expect several outputs
-                    lisp_interpreter.expect(lisp_prompt)
-                    print(lisp_interpreter.before)
-            else:
-                # echo behavior
-                parsed_str = nod_tree_to_string(nod_tree)
-                print(parsed_str)
-                logging.debug("echo parsed_str:%s" % parsed_str)
+            # only echo behavior is supported -- pipe the output to interpreters for interactive use
+            parsed_str = nod_tree_to_string(nod_tree)
+            print(parsed_str)
+            logging.debug("echo parsed_str:%s" % parsed_str)
 

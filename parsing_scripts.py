@@ -157,7 +157,7 @@ def parse_syntax(chars: str) -> str:
 
     nod_tree  = MyList()
     nod_tree.n = 0
-    semicolon_nod_stack = MyList(nod_tree) # hook for (coma)colon-semicolon cooperation (i.e. for 1 line of code)
+    semicolon_nod_stack = MyList([nod_tree]) # hook for (coma)colon-semicolon cooperation (i.e. for 1 line of code)
     nod_stack = MyList([nod_tree]) # current branch of the tree
     open_nods, open_parenthesis = MyList(nod_tree), 0 # track open parentheses
     current_tabs = 0
