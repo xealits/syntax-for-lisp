@@ -1,7 +1,8 @@
 define prog
-	quote :
+	quote (
 		+ 1 2
 		a b c
+		)
 % in principle, according to the article, this should work with two indentations
 %quote
 %		+ 1 2

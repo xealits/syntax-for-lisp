@@ -36,7 +36,10 @@ define (ls-func targets)
 %;
 %;display , ls input
 
-%; now ls accepts any number of argument, targets is the list containing them
+%; now ls is a macro
+%; it accepts any number of arguments
+%; quotes them
+%; and passes to ls-func
 define-syntax ls
   syntax-rules ()
     (ls body ...) (ls-func, quote (body ...))

@@ -42,14 +42,21 @@ class MyList(list):
     '''
     pass
     # TODO: def __init__ with keyword-only ntabs for setting tabs, other params --> to super(blah).__init__() somehow
+    def __init__(self, l=list(), call_tabs=True):
+        self.call_tabs = call_tabs
+        super().__init__(l)
 
 class Tabs:
-    def __init__(self, n):
+    def __init__(self, n, call_tabs = True):
         self.n = n
+        self.call_tabs = call_tabs
     def __str__(self):
         return '\t' * self.n
     def __repr__(self):
         return "Tabs(%d)" % self.n
+
+class NoCallTabs:
+    pass
 
 syntax_tokens = ['(', ')', '\n', '\t', ';', ',', ':', '%']
 syntax_tokens_to_pad = ['(', ')', '\n', '\t', ';', ',', '%']
@@ -76,6 +83,20 @@ def parse_tokens(chars: str) -> 'list(str)':
     # I'll accept spaces as input,
     # but they are splited on later
     # thus I'll parse them first and turn into tabs
+
+    ## I'll try to parse tabs with regexps:
+    ## no-call tabs
+    # I'll risk and parse them in the following
+    #pattern = re.compile('\\\n')
+    #for i in pattern.finditer(chars):
+    #    a, b = i.span()
+    #    n_spaces = b - a - 1
+    #    # the worst part:
+    #    chars = chars[:a+1] + NoCallTabs() + '\n' + chars[b:]
+    ## there is a token "don't call" -- mark the parent node with this,
+    ## refer to parent node for decision on tabs
+
+    # the defaul tabs with calls
     pattern = re.compile('\n[ ]+')
     for i in pattern.finditer(chars):
         a, b = i.span()
@@ -90,6 +111,7 @@ def parse_tokens(chars: str) -> 'list(str)':
     newline = False
     tabline = 0
     comment = False
+    prev_token = None
     for t in chars.split(' '):
         if t == '':
             continue
@@ -101,6 +123,9 @@ def parse_tokens(chars: str) -> 'list(str)':
         elif t == '\n':
             if comment: comment = False
             if newline: res += '\n'
+            if prev_token == '\\':
+                res.pop() # pop the '\' symbol
+                res += [NoCallTabs()]
             newline = True
             #res.append(t)
         elif t == '\t': # to have all tabs caught
@@ -117,6 +142,7 @@ def parse_tokens(chars: str) -> 'list(str)':
                 newline = False
             else:
                 res.append(t)
+        prev_token = t
 
     return res
 
@@ -131,7 +157,7 @@ def parse_syntax(chars: str) -> str:
 
     nod_tree  = MyList()
     nod_tree.n = 0
-    semicolon_nod_stack = MyList(nod_tree) # hook for (coma)colon-semicolon cooperation
+    semicolon_nod_stack = MyList(nod_tree) # hook for (coma)colon-semicolon cooperation (i.e. for 1 line of code)
     nod_stack = MyList([nod_tree]) # current branch of the tree
     open_nods, open_parenthesis = MyList(nod_tree), 0 # track open parentheses
     current_tabs = 0
@@ -152,6 +178,10 @@ def parse_syntax(chars: str) -> str:
             open_parenthesis += 1
             # parentheses should somehow work above other syntaxis, but how?
             #indent_parent, indent_prev, current_tabs = nod_tree, nod_tree, 0
+
+        elif type(t) is NoCallTabs:
+            if len(nod_stack) > 1: # don't affect the root/nod_tree
+                nod_stack[-1].call_tabs = False
 
         elif type(t) is Tabs:
             # I need to store info on N tabs of currenlty opened nodes
@@ -213,12 +243,15 @@ def parse_syntax(chars: str) -> str:
                 #print(nod_stack)
                 pass
 
-            new_nod = MyList()
-            new_nod.n = t.n
-            nod_stack[-1].append(new_nod)
-            nod_stack.append(new_nod)
-            semicolon_nod_stack[-1] = new_nod # so the tab-node is semicolon node
-            current_tabs = t.n
+            # nest a node if it is the default call-tab node
+            if nod_stack[-1].call_tabs:
+                new_nod = MyList()
+                new_nod.n = t.n
+                nod_stack[-1].append(new_nod)
+                nod_stack.append(new_nod)
+                semicolon_nod_stack[-1] = new_nod # so the tab-node is semicolon node
+                current_tabs = t.n
+            # otherwise don't nest node
 
         elif t == '\n':
             if open_parenthesis:
@@ -239,18 +272,22 @@ def parse_syntax(chars: str) -> str:
 
 
         elif t == ',':
-            # coma nests in current node, but doesn't move the semicolon hook
-            new_nod = MyList()
+            # coma nests all current content of the current node as a new node in the current node
+            # a b , c = ((a b) c)
+            current_node = nod_stack[-1]
+            new_nod = MyList(current_node[:])
             new_nod.n = current_tabs
-            nod_stack[-1].append(new_nod)
-            nod_stack.append(new_nod) # don't forget to grow the stack
+            #nod_stack[-1] = new_nod # set current node in the stack
+            current_node.clear()
+            current_node.append(new_nod)
         elif t == ':':
-            # (coma^W) colon nests in current node and moves the semicolon hook
+            # colon nests in current node until the end of the line
+            # i.e. it doesn't move the semicolon hook
             new_nod = MyList()
             new_nod.n = current_tabs
             nod_stack[-1].append(new_nod)
             nod_stack.append(new_nod) # don't forget to grow the stack
-            semicolon_nod_stack.append(new_nod)
+            #semicolon_nod_stack.append(new_nod)
 
         elif t == ';':
             # semicolon finishes its' node
@@ -304,6 +341,8 @@ def parse_syntax(chars: str) -> str:
             # just add the symbol to the last nod
             #print(nod_stack)
             #print('adding symbol:\n%s' % t)
+            logging.debug("add_sym:%s" % t)
+            #logging.debug("add_sym:nod_stack:%s" % nod_stack)
             nod_stack[-1].append(t)
 
     return nod_tree
@@ -331,7 +370,7 @@ if __name__ == '__main__':
         )
 
     parser.add_argument('script', help="the filename of the syntaxed-lisp script to execute")
-    parser.add_argument('-d', '--debug', help="level of loggin = DEBUG", action="store_true")
+    parser.add_argument('-d', '--debug', help="level of logging= DEBUG", action="store_true")
     parser.add_argument('-o', '--options', nargs='*', help="options to pass to the script")
 
     args = parser.parse_args()
