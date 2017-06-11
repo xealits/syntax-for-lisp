@@ -108,3 +108,8 @@ or
 		body-goes-here
 
 
+Similar projects
+================
+
+[ClojureScript Parinfer](https://shaunlebron.github.io/parinfer/).
+
